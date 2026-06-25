@@ -1,73 +1,63 @@
-# React + TypeScript + Vite
+# InboxPilot — Email/Password Auth (replaces Kimi OAuth)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This package swaps the Kimi-platform login for self-contained email + password
+auth that reuses your existing `jose` session cookie. No paid services, no
+external auth provider.
 
-Currently, two official plugins are available:
+## 1. Copy these files into your repo (overwrite existing)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+    db/schema.ts                  (added: passwordHash, email now required+unique)
+    api/lib/env.ts                (trimmed to APP_SECRET + DATABASE_URL only)
+    api/queries/connection.ts     (Aiven TLS + standard MySQL mode)
+    api/queries/users.ts          (findUserByEmail / createUser / countUsers)
+    api/kimi/auth.ts              (now only reads the session cookie)
+    api/auth/password.ts          (NEW — scrypt hashing, no dependencies)
+    api/auth-router.ts            (NEW: register + login mutations)
+    api/boot.ts                   (removed the OAuth callback route)
+    src/pages/Login.tsx           (email/password form)
 
-## React Compiler
+## 2. DELETE this file from your repo
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+    api/kimi/platform.ts          (Kimi profile fetch — no longer used)
 
-## Expanding the ESLint configuration
+## 3. Update your .env (local) and Render (production)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+You now need only TWO variables. Delete all the APP_ID / VITE_* / KIMI_* lines.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+    APP_SECRET=<run: openssl rand -base64 32>
+    DATABASE_URL=mysql://avnadmin:PASSWORD@HOST.aivencloud.com:PORT/defaultdb
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+(See .env.example in this package.)
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## 4. Create the database tables
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+With DATABASE_URL pointing at your Aiven database, run once from your machine:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+    npm run db:push
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## 5. Run / deploy
+
+    npm install
+    npm run build
+    npm start            # local prod test (set NODE_ENV=production)
+
+On Render: Build = `npm run build`, Start = `npm start`,
+add APP_SECRET and DATABASE_URL as environment variables.
+
+## How it works now
+
+- Register/login are tRPC mutations at `auth.register` / `auth.login`.
+- On success they set the same `jose` session cookie your app already used,
+  so every existing authed route keeps working unchanged.
+- The FIRST account that registers automatically becomes role = "admin".
+- Passwords are hashed with Node's built-in scrypt (no bcrypt dependency).
+- The password hash is never sent to the browser.
+
+## Notes
+- `api/queries/connection.ts` uses `ssl: { rejectUnauthorized: false }` for
+  remote databases. The connection is still encrypted (TLS); certificate
+  verification is skipped so you don't have to bundle Aiven's CA cert. Fine for
+  a hobby project. To harden later, download Aiven's CA and pass it as
+  `ssl: { ca: <cert> }`.
+- The session cookie is still named `kimi_sid` (cosmetic only — rename in
+  contracts/constants.ts if you like; it just logs everyone out once).
