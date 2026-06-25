@@ -32,7 +32,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Brand */}
         <div className="px-6 pt-6 pb-4">
           <h1 className="text-white text-lg font-normal tracking-wide">
-            Lexi Translation Lab
+            InboxPilot
           </h1>
           <p className="text-[#8bafd4] text-[11px] uppercase tracking-[1.5px] mt-0.5">
             Email Campaigns
