@@ -150,7 +150,14 @@ export default function SettingsPage() {
         <div className="flex items-center gap-3 pt-2">
           <Button
             variant="outline"
-            onClick={() => testMutation.mutate()}
+            onClick={() =>
+              testMutation.mutate({
+                smtpHost,
+                smtpPort: Number(smtpPort) || 587,
+                smtpUser,
+                smtpPass: smtpPass || undefined,
+              })
+            }
             disabled={testMutation.isPending}
             className="h-10 border-[#e0e0e0]"
           >
