@@ -48,6 +48,7 @@ async function getSmtpTransporter() {
     host: s.smtpHost,
     port: s.smtpPort,
     secure: s.smtpPort === 465,
+    requireTLS: s.smtpPort !== 465,
     auth: { user: s.smtpUser, pass: s.smtpPass },
     connectionTimeout: 30000,
     greetingTimeout: 30000,
@@ -66,8 +67,15 @@ async function sendEmail(
   htmlBody: string | null,
   unsubscribeUrl?: string
 ): Promise<void> {
+  // Zoho (and most providers) only allow sending "From" the authenticated
+  // mailbox or a verified alias. Mirror the console version, where SENDER_EMAIL
+  // equals SMTP_USER: if no sender email is configured, fall back to the
+  // authenticated user instead of producing an invalid empty From.
+  const fromEmail = smtpSettings.senderEmail || smtpSettings.smtpUser;
+  const fromName = smtpSettings.senderName || fromEmail;
+
   const message: nodemailer.SendMailOptions = {
-    from: `"${smtpSettings.senderName}" <${smtpSettings.senderEmail}>`,
+    from: `"${fromName}" <${fromEmail}>`,
     to: toName ? `"${toName}" <${toEmail}>` : toEmail,
     replyTo: smtpSettings.replyTo || undefined,
     subject,
