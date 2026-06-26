@@ -1,5 +1,6 @@
 import { useLocation, Link } from "react-router";
 import { useAuth } from "@/hooks/useAuth";
+import { LOGIN_PATH } from "@/const";
 import {
   LayoutDashboard,
   Mail,
@@ -9,6 +10,7 @@ import {
   Ban,
   Settings,
   LogOut,
+  LogIn,
 } from "lucide-react";
 
 const navItems = [
@@ -23,7 +25,7 @@ const navItems = [
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading } = useAuth();
 
   return (
     <div className="flex min-h-screen bg-[#f0f2f5]">
@@ -88,10 +90,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {navItems.find((n) => n.path === location.pathname)?.label || "Dashboard"}
           </h1>
           <div className="flex items-center gap-3">
-            {user && (
+            {user ? (
               <div className="w-9 h-9 rounded-full bg-[#1a3a5c] flex items-center justify-center text-white text-sm font-medium">
                 {user.name?.charAt(0) || "U"}
               </div>
+            ) : (
+              !isLoading && (
+                <Link
+                  to={LOGIN_PATH}
+                  className="flex items-center gap-2 h-9 px-4 rounded-md bg-[#1a3a5c] text-white text-sm font-medium hover:bg-[#234a73] transition-colors"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Login
+                </Link>
+              )
             )}
           </div>
         </header>
