@@ -127,6 +127,7 @@ export const settingRouter = createRouter({
           host,
           port,
           secure: port === 465,
+          requireTLS: port !== 465,
           auth: { user, pass },
           connectionTimeout: 10000,
           greetingTimeout: 10000,
